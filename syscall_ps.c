@@ -9,14 +9,27 @@
 #include <errno.h>
 #include "strace.h"
 
+/* Print INT */
+int printINT(int value) {
+	return printf("%d", value);
+}
+
+/* Print pointer */
+int printPTR(long long addr) {
+	if(!addr) {
+		return printf("NULL");
+	}
+
+	return printf("0x%llx", addr);
+}
+
 /* Print the string specified by address @addr
  * If the string length exceeds @n, append "..." behind the string
  * This function return number of output characters.
  */
 int printSTR_PTR(pid_t pid, long long addr, int n) {
 	if(!addr) {
-		printf("NULL");
-		return 0;
+		return printf("NULL");
 	}
 
 	char *str = (char *)malloc(n + 1);	
@@ -67,11 +80,30 @@ int open_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallE
 		outputNum += printf("(");
 		outputNum += printSTR_PTR(pid, regs->rdi, PRINT_STR_LEN);
 		outputNum += printf(", ");
-		outputNum += printf("%lld", regs->rsi);
+		outputNum += printINT(regs->rsi);
 		outputNum += printf(")");
 	} else {
-		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = %lld\n", EQ_FORMAT - outputNum_forEnd, "", regs->rax);
-		else outputNum = printf(" = %lld\n", regs->rax);
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printINT(regs->rax);
+		outputNum += printf("\n");
+	}
+	return outputNum;
+}
+
+/* brk(PTR) = NUM */
+int brk_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(");
+		outputNum += printPTR(regs->rdi);
+		outputNum += printf(")");
+	} else {
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printINT(regs->rax);
+		outputNum += printf("\n");
 	}
 	return outputNum;
 }
@@ -82,15 +114,17 @@ int openat_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscal
 	if(isSyscallEntrance) {
 		outputNum = printSyscallName(regs->orig_rax);
 		outputNum += printf("(");
-		outputNum += printf("%lld", regs->rdi);
+		outputNum += printINT(regs->rdi);
 		outputNum += printf(", ");
 		outputNum += printSTR_PTR(pid, regs->rsi, PRINT_STR_LEN);
 		outputNum += printf(", ");
-		outputNum += printf("%lld", regs->rdx);
+		outputNum += printINT(regs->rdx);
 		outputNum += printf(")");
 	} else {
-		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = %lld\n", EQ_FORMAT - outputNum_forEnd, "", regs->rax);
-		else outputNum = printf(" = %lld\n", regs->rax);
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printINT(regs->rax);
+		outputNum += printf("\n");
 	}
 	return outputNum;
 }

@@ -101,6 +101,9 @@ int printSyscall(pid_t pid, const struct user_regs_struct *regs, const char isSy
 	case MYSYS_open:
 		outputNum = open_p(pid, regs, isSyscallEntrance, outputNum);
 		break;
+	case MYSYS_brk:
+		outputNum = brk_p(pid, regs, isSyscallEntrance, outputNum);
+		break;
 	case MYSYS_openat:
 		outputNum = openat_p(pid, regs, isSyscallEntrance, outputNum);
 		break;
