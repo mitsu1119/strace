@@ -6,10 +6,12 @@
 #include <sys/wait.h>
 #include <sys/ptrace.h>
 #include <sys/user.h>
+#include "syscallDefs.h"
 
 #define EQ_FORMAT 40
 
 int printSyscallName(int syscallID);
+int printSyscall(const struct user_regs_struct *regs, const char isSyscallEntrance);
 
 int main(int argc, char *argv[], char *argp[]) {
 	if(argc < 2) return 0;
@@ -72,13 +74,7 @@ int main(int argc, char *argv[], char *argp[]) {
 					// printf("Signal %d\n", WSTOPSIG(status));
 					ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-					if(isSyscallEntrance) {
-						outputNum = printSyscallName(regs.orig_rax);
-						outputNum += printf("(0x%lx, 0x%lx, 0x%lx)", regs.rdi, regs.rsi, regs.rdx);
-					} else {
-						if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%lx\n", EQ_FORMAT - outputNum, "", regs.rax);
-						else printf(" = 0x%lx\n", regs.rax);
-					}
+					printSyscall(&regs, isSyscallEntrance);
 
 					isSyscallEntrance ^= 1;
 					ptrace(PTRACE_SYSCALL, pid, 0, 0);
@@ -93,6 +89,25 @@ int main(int argc, char *argv[], char *argp[]) {
 	printf("\n");
 
 	return 0;
+}
+
+/* Now, it is assumed that all systemcall have 3 arguments.
+ * The ideal is to output all systemcall according to this.
+ * 1) If the number is string pointer, print the string.
+ * 2) If the number is other pointer, print the address number by hexadecimal.
+ * 3) If the number is not pointer and defined as general constants, print the constants string.
+ * 4) If the number is other, print the number by decimal number.
+ * 5) Print the systemcall arguments correctly.
+ */
+int printSyscall(const struct user_regs_struct *regs, const char isSyscallEntrance) {
+	int outputNum;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(0x%lx, 0x%lx, 0x%lx)", regs->rdi, regs->rsi, regs->rdx);
+	} else {
+		if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%lx\n", EQ_FORMAT - outputNum, "", regs->rax);
+		else printf(" = 0x%lx\n", regs->rax);
+	}
 }
 
 /* Print systemcall name from the id. 
