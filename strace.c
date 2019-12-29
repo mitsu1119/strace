@@ -7,11 +7,7 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include "syscallDefs.h"
-
-#define EQ_FORMAT 40
-
-int printSyscallName(int syscallID);
-int printSyscall(const struct user_regs_struct *regs, const char isSyscallEntrance);
+#include "strace.h"
 
 int main(int argc, char *argv[], char *argp[]) {
 	if(argc < 2) return 0;
@@ -74,7 +70,7 @@ int main(int argc, char *argv[], char *argp[]) {
 					// printf("Signal %d\n", WSTOPSIG(status));
 					ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-					printSyscall(&regs, isSyscallEntrance);
+					printSyscall(pid, &regs, isSyscallEntrance);
 
 					isSyscallEntrance ^= 1;
 					ptrace(PTRACE_SYSCALL, pid, 0, 0);
@@ -99,20 +95,22 @@ int main(int argc, char *argv[], char *argp[]) {
  * 4) If the number is other, print the number by decimal number.
  * 5) Print the systemcall arguments correctly.
  */
-int printSyscall(const struct user_regs_struct *regs, const char isSyscallEntrance) {
+int printSyscall(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance) {
 	int outputNum;
-	if(isSyscallEntrance) {
+	if(regs->orig_rax == MYSYS_openat) {
+		outputNum = openat_p(pid, regs, isSyscallEntrance, outputNum);
+	} else if(isSyscallEntrance) {
 		outputNum = printSyscallName(regs->orig_rax);
-		outputNum += printf("(0x%lx, 0x%lx, 0x%lx)", regs->rdi, regs->rsi, regs->rdx);
+		outputNum += printf("(0x%llx, 0x%llx, 0x%llx)", regs->rdi, regs->rsi, regs->rdx);
 	} else {
-		if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%lx\n", EQ_FORMAT - outputNum, "", regs->rax);
-		else printf(" = 0x%lx\n", regs->rax);
+		if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%llx\n", EQ_FORMAT - outputNum, "", regs->rax);
+		else printf(" = 0x%llx\n", regs->rax);
 	}
 }
 
 /* Print systemcall name from the id. 
  * Return number is the byte number that outputed by printf */
-int printSyscallName(int syscallID) {
+int printSyscallName(const int syscallID) {
 	int x;
 	switch(syscallID) {
 	case 0: x=printf("read"); break;
