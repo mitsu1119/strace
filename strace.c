@@ -97,14 +97,21 @@ int main(int argc, char *argv[], char *argp[]) {
  */
 int printSyscall(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance) {
 	int outputNum;
-	if(regs->orig_rax == MYSYS_openat) {
+	switch(regs->orig_rax) {
+	case MYSYS_open:
+		outputNum = open_p(pid, regs, isSyscallEntrance, outputNum);
+		break;
+	case MYSYS_openat:
 		outputNum = openat_p(pid, regs, isSyscallEntrance, outputNum);
-	} else if(isSyscallEntrance) {
-		outputNum = printSyscallName(regs->orig_rax);
-		outputNum += printf("(0x%llx, 0x%llx, 0x%llx)", regs->rdi, regs->rsi, regs->rdx);
-	} else {
-		if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%llx\n", EQ_FORMAT - outputNum, "", regs->rax);
-		else printf(" = 0x%llx\n", regs->rax);
+		break;
+	default:
+		if(isSyscallEntrance) {
+			outputNum = printSyscallName(regs->orig_rax);
+			outputNum += printf("(0x%llx, 0x%llx, 0x%llx)", regs->rdi, regs->rsi, regs->rdx);
+		} else {
+			if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%llx\n", EQ_FORMAT - outputNum, "", regs->rax);
+			else printf(" = 0x%llx\n", regs->rax);
+		}
 	}
 }
 

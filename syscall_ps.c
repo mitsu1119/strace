@@ -11,6 +11,7 @@
 
 /* Print the string specified by address @addr
  * If the string length exceeds @n, append "..." behind the string
+ * This function return number of output characters.
  */
 int printSTR_PTR(pid_t pid, long long addr, int n) {
 	if(!addr) {
@@ -19,6 +20,7 @@ int printSTR_PTR(pid_t pid, long long addr, int n) {
 	}
 
 	char *str = (char *)malloc(n + 1);	
+	int outputNum = 0;
 
 	struct iovec local[1], remote[1];
 	local[0].iov_base = str;
@@ -29,12 +31,12 @@ int printSTR_PTR(pid_t pid, long long addr, int n) {
 	int r = process_vm_readv(pid, local, 1, remote, 1, 0);
 	if(r > 0) {
 		if(memchr(local[0].iov_base, '\0', r)) {
-			printf("\"%s\"", str);
-			return 1;
+			outputNum = printf("\"%s\"", str);
+			return outputNum;
 		} else {
 			str[n] = '\0';
-			printf("\"%s...\"", str);
-			return 0;
+			outputNum = printf("\"%s\"...", str);
+			return outputNum;
 		}
 	}
 
@@ -57,19 +59,38 @@ int printSTR_PTR(pid_t pid, long long addr, int n) {
 	return 0;
 }
 
-/* openat(CONST, STR_PTR, CONST) = NUM */
-int openat_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
-	int outputNum;
-	char path[256];
+/* open(STR_PTR, CONST) = NUM */
+int open_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
 	if(isSyscallEntrance) {
 		outputNum = printSyscallName(regs->orig_rax);
-		outputNum += printf("(0x%llx, ", regs->rdi);
-
-		printSTR_PTR(pid, regs->rsi, PRINT_STR_LEN);
-		printf(", 0x%llx)", regs->rdx);
+		outputNum += printf("(");
+		outputNum += printSTR_PTR(pid, regs->rdi, PRINT_STR_LEN);
+		outputNum += printf(", ");
+		outputNum += printf("%lld", regs->rsi);
+		outputNum += printf(")");
 	} else {
-		if(EQ_FORMAT >= outputNum_forEnd) printf("%-*s = 0x%llx\n", EQ_FORMAT - outputNum_forEnd, "", regs->rax);
-		else printf(" = %lld\n", regs->rax);
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = %lld\n", EQ_FORMAT - outputNum_forEnd, "", regs->rax);
+		else outputNum = printf(" = %lld\n", regs->rax);
+	}
+	return outputNum;
+}
+
+/* openat(CONST, STR_PTR, CONST) = NUM */
+int openat_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(");
+		outputNum += printf("%lld", regs->rdi);
+		outputNum += printf(", ");
+		outputNum += printSTR_PTR(pid, regs->rsi, PRINT_STR_LEN);
+		outputNum += printf(", ");
+		outputNum += printf("%lld", regs->rdx);
+		outputNum += printf(")");
+	} else {
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = %lld\n", EQ_FORMAT - outputNum_forEnd, "", regs->rax);
+		else outputNum = printf(" = %lld\n", regs->rax);
 	}
 	return outputNum;
 }
