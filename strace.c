@@ -48,17 +48,19 @@ int main(int argc, char *argv[], char *argp[]) {
 				}
 
 				if(WSTOPSIG(status) != (SIGTRAP | 0x80) && WSTOPSIG(status) != SIGTRAP) {
-					printf("Signal %d\n", WSTOPSIG(status));
+					// printf("Signal %d\n", WSTOPSIG(status));
 					ptrace(PTRACE_SYSCALL, pid, 0, WSTOPSIG(status));
 				} else {
 					// syscall signal SIGTRAP
-					printf("Signal %d\n", WSTOPSIG(status));
+					// printf("Signal %d\n", WSTOPSIG(status));
 					ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-					if(isSyscallEntrance) printf("Syscall start ");
-					else printf("Syscall end ");
-					printSyscallName(regs.orig_rax);
-					putchar('\n');
+					if(isSyscallEntrance) {
+						printSyscallName(regs.orig_rax);
+						printf("()");
+					} else {
+						printf(" = 0x%x\n", regs.rax);
+					}
 
 					isSyscallEntrance ^= 1;
 					ptrace(PTRACE_SYSCALL, pid, 0, 0);
