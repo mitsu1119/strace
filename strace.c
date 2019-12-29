@@ -40,11 +40,18 @@ int main(int argc, char *argv[], char *argp[]) {
 			} else if(WIFSIGNALED(status)) {
 				break;
 			} else if(WIFSTOPPED(status)) {
-				// first signal... SIGSTOP
-				// setting ptrace(PTRACE_SETOPTIONS, ...)
+				// first signal... SIGTRAP by first execve
+				// setting ptrace(PTRACE_SETOPTIONS, ...) and print execve(...) = ...
 				if(!ptracesetoptionsFlag) {
 					ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEEXEC);
 					ptracesetoptionsFlag = 1;
+
+					ptrace(PTRACE_GETREGS, pid, 0, &regs);
+					printSyscallName(regs.orig_rax);
+					printf("(0x%lx, 0x%lx, 0x%lx) = 0x%x\n", regs.rdi, regs.rsi, regs.rdx, regs.rax);
+					isSyscallEntrance ^= 1;
+					ptrace(PTRACE_SYSCALL, pid, 0, 0);
+					continue;
 				}
 
 				if(WSTOPSIG(status) != (SIGTRAP | 0x80) && WSTOPSIG(status) != SIGTRAP) {
@@ -57,9 +64,9 @@ int main(int argc, char *argv[], char *argp[]) {
 
 					if(isSyscallEntrance) {
 						printSyscallName(regs.orig_rax);
-						printf("()");
+						printf("(0x%lx, 0x%lx, 0x%lx)", regs.rdi, regs.rsi, regs.rdx);
 					} else {
-						printf(" = 0x%x\n", regs.rax);
+						printf(" = 0x%lx\n", regs.rax);
 					}
 
 					isSyscallEntrance ^= 1;
