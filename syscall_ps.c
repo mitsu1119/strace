@@ -5,6 +5,7 @@
 #include <sys/ptrace.h>
 #include <unistd.h>
 #include <string.h>
+#include <err.h>
 #include "strace.h"
 
 /* Print the string specified by address @addr
