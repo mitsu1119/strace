@@ -13,7 +13,7 @@ int main(int argc, char *argv[], char *argp[]) {
 	if(argc < 2) return 0;
 
 	pid_t pid = fork();
-	
+
 	if(pid == -1) {
 		err(EXIT_FAILURE, "Could not fork.");
 		exit(EXIT_FAILURE);
@@ -31,6 +31,7 @@ int main(int argc, char *argv[], char *argp[]) {
 		struct user_regs_struct regs;
 		char ptracesetoptionsFlag = 0;
 		
+		printSuchSyscall_init();
 		while(1) {
 			// wait child signal
 			pid_t w = waitpid(pid, &status, WUNTRACED | WCONTINUED);
@@ -70,7 +71,7 @@ int main(int argc, char *argv[], char *argp[]) {
 					// printf("Signal %d\n", WSTOPSIG(status));
 					ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-					printSyscall(pid, &regs, isSyscallEntrance);
+					outputNum = printSyscall(pid, &regs, isSyscallEntrance);
 
 					isSyscallEntrance ^= 1;
 					ptrace(PTRACE_SYSCALL, pid, 0, 0);
@@ -97,25 +98,8 @@ int main(int argc, char *argv[], char *argp[]) {
  */
 int printSyscall(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance) {
 	int outputNum;
-	switch(regs->orig_rax) {
-	case MYSYS_open:
-		outputNum = open_p(pid, regs, isSyscallEntrance, outputNum);
-		break;
-	case MYSYS_brk:
-		outputNum = brk_p(pid, regs, isSyscallEntrance, outputNum);
-		break;
-	case MYSYS_openat:
-		outputNum = openat_p(pid, regs, isSyscallEntrance, outputNum);
-		break;
-	default:
-		if(isSyscallEntrance) {
-			outputNum = printSyscallName(regs->orig_rax);
-			outputNum += printf("(0x%llx, 0x%llx, 0x%llx)", regs->rdi, regs->rsi, regs->rdx);
-		} else {
-			if(EQ_FORMAT >= outputNum) printf("%-*s = 0x%llx\n", EQ_FORMAT - outputNum, "", regs->rax);
-			else printf(" = 0x%llx\n", regs->rax);
-		}
-	}
+	outputNum = (printSuchSyscall[regs->orig_rax])(pid, regs, isSyscallEntrance, outputNum);
+	return outputNum;
 }
 
 /* Print systemcall name from the id. 
