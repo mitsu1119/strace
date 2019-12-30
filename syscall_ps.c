@@ -93,7 +93,7 @@ int general_p(pid_t pid, const struct user_regs_struct *regs, const char isSysca
 	return outputNum;
 }
 
-/* read(INT, STR_PTR, INT) = INT */
+/* 0: read(INT, STR_PTR, INT) = INT */
 int read_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
 	if(isSyscallEntrance) {
@@ -115,7 +115,7 @@ int read_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallE
 	return outputNum;
 }
 
-/* open(STR_PTR, CONST) = INT */
+/* 2: open(STR_PTR, CONST) = INT */
 int open_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
 	if(isSyscallEntrance) {
@@ -134,7 +134,7 @@ int open_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallE
 	return outputNum;
 }
 
-/* close(INT) = INT */
+/* 3: close(INT) = INT */
 int close_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
 	if(isSyscallEntrance) {
@@ -151,7 +151,53 @@ int close_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscall
 	return outputNum;
 }
 
-/* brk(PTR) = INT */
+/* 5: fstat(INT, PTR) = INT */
+int fstat_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(");
+		outputNum += printINT(REGS_ARG(1));
+		outputNum += printf(", ");
+		outputNum += printPTR(REGS_ARG(2));
+		outputNum += printf(")");
+	} else {
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printINT(regs->rax);
+		outputNum += printf("\n");
+	}
+	return outputNum;
+}
+
+/* 9: mmap(PTR, INT, CONST, CONST, INT, INT) = PTR */
+int mmap_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(");
+		outputNum += printPTR(REGS_ARG(1));
+		outputNum += printf(", ");
+		outputNum += printINT(REGS_ARG(2));
+		outputNum += printf(", ");
+		outputNum += printINT(REGS_ARG(3));
+		outputNum += printf(", ");
+		outputNum += printINT(REGS_ARG(4));
+		outputNum += printf(", ");
+		outputNum += printINT(REGS_ARG(5));
+		outputNum += printf(", ");
+		outputNum += printINT(REGS_ARG(6));
+		outputNum += printf(")");
+	} else {
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printPTR(regs->rax);
+		outputNum += printf("\n");
+	}
+	return outputNum;
+}
+
+/* 12: brk(PTR) = INT */
 int brk_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
 	if(isSyscallEntrance) {
@@ -168,7 +214,7 @@ int brk_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEn
 	return outputNum;
 }
 
-/* access(STR_PTR, CONST) = INT */
+/* 21: access(STR_PTR, CONST) = INT */
 int access_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
 	if(isSyscallEntrance) {
@@ -187,7 +233,7 @@ int access_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscal
 	return outputNum;
 }
 
-/* openat(CONST, STR_PTR, CONST) = INT */
+/* 257: openat(CONST, STR_PTR, CONST) = INT */
 int openat_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
 	if(isSyscallEntrance) {
@@ -214,6 +260,8 @@ void printSuchSyscall_init() {
 	printSuchSyscall[MYSYS_read] = read_p;
 	printSuchSyscall[MYSYS_open] = open_p;
 	printSuchSyscall[MYSYS_close] = close_p;
+	printSuchSyscall[MYSYS_fstat] = fstat_p;
+	printSuchSyscall[MYSYS_mmap] = mmap_p;
 	printSuchSyscall[MYSYS_brk] = brk_p;
 	printSuchSyscall[MYSYS_access] = access_p;
 	printSuchSyscall[MYSYS_openat] = openat_p;
