@@ -93,6 +93,28 @@ int general_p(pid_t pid, const struct user_regs_struct *regs, const char isSysca
 	return outputNum;
 }
 
+/* read(INT, STR_PTR, INT) = INT */
+int read_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(");
+		
+		outputNum += printINT(REGS_ARG(1));
+		outputNum += printf(", ");
+		outputNum += printSTR_PTR(pid, REGS_ARG(2), PRINT_STR_LEN);
+		outputNum += printf(", ");
+		outputNum += printINT(REGS_ARG(3));
+		outputNum += printf(")");
+	} else {
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printINT(regs->rax);
+		outputNum += printf("\n");
+	}
+	return outputNum;
+}
+
 /* open(STR_PTR, CONST) = INT */
 int open_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
 	int outputNum = 0;
@@ -102,6 +124,23 @@ int open_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallE
 		outputNum += printSTR_PTR(pid, REGS_ARG(1), PRINT_STR_LEN);
 		outputNum += printf(", ");
 		outputNum += printINT(REGS_ARG(2));
+		outputNum += printf(")");
+	} else {
+		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
+		else outputNum = printf(" = ", regs->rax);
+		outputNum += printINT(regs->rax);
+		outputNum += printf("\n");
+	}
+	return outputNum;
+}
+
+/* close(INT) = INT */
+int close_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscallEntrance, int outputNum_forEnd) {
+	int outputNum = 0;
+	if(isSyscallEntrance) {
+		outputNum = printSyscallName(regs->orig_rax);
+		outputNum += printf("(");
+		outputNum += printINT(REGS_ARG(1));
 		outputNum += printf(")");
 	} else {
 		if(EQ_FORMAT >= outputNum_forEnd) outputNum = printf("%-*s = ", EQ_FORMAT - outputNum_forEnd, "");
@@ -172,7 +211,9 @@ int openat_p(pid_t pid, const struct user_regs_struct *regs, const char isSyscal
 /* such systemcall function table */
 fptr printSuchSyscall[MYSYS_clone3 + 1];
 void printSuchSyscall_init() {
+	printSuchSyscall[MYSYS_read] = read_p;
 	printSuchSyscall[MYSYS_open] = open_p;
+	printSuchSyscall[MYSYS_close] = close_p;
 	printSuchSyscall[MYSYS_brk] = brk_p;
 	printSuchSyscall[MYSYS_access] = access_p;
 	printSuchSyscall[MYSYS_openat] = openat_p;
